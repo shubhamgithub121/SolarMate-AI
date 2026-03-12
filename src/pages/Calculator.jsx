@@ -1,39 +1,38 @@
-import { useState, useEffect } from 'react';
-import { Cloud, Thermometer, Droplets, Wind, Sun, Zap } from 'lucide-react';
+import { useState } from "react";
+import { Cloud, Thermometer, Droplets, Wind, Sun } from "lucide-react";
+import bgImage from "../assests/sky.jpg";
 
 function Calculator() {
-  const [selectedCity, setSelectedCity] = useState('');
+
+  const BACKEND_URL = "http://localhost:5000/predict";
+
+  const [selectedCity, setSelectedCity] = useState("");
   const [weatherData, setWeatherData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [solarOutput, setSolarOutput] = useState(null);
   const [predicting, setPredicting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const cities = ['Delhi', 'Mumbai', 'Bangalore', 'Jaipur'];
-
-  useEffect(() => {
-    if (selectedCity) {
-      fetchWeatherData(selectedCity);
-    }
-  }, [selectedCity]);
+  const cities = [
+    "Delhi","Mumbai","Bangalore","Hyderabad","Chennai","Kolkata",
+    "Pune","Ahmedabad","Jaipur","Lucknow","Chandigarh","Bhopal",
+    "Patna","Ranchi","Raipur","Bhubaneswar","Guwahati","Dehradun",
+    "Shimla","Panaji","Thiruvananthapuram","Kochi","Indore","Nagpur",
+    "Surat","Vadodara","Visakhapatnam","Mysore","Coimbatore","Amritsar"
+  ];
 
   const fetchWeatherData = async (city) => {
     setLoading(true);
-    setError('');
+    setError("");
     setSolarOutput(null);
 
     try {
-      const apiKey = 'YOUR_WEATHER_API_KEY';
+      const apiKey = "6ce99dc4a2d5908330f49db66e3a8e09";
       const response = await fetch(
         `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
       );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch weather data');
-      }
-
+      if (!response.ok) throw new Error("Weather API error");
       const data = await response.json();
-
       setWeatherData({
         temperature: data.main.temp,
         humidity: data.main.humidity,
@@ -42,31 +41,35 @@ function Calculator() {
         condition: data.weather[0].description,
       });
     } catch (err) {
-      setError('Unable to fetch weather data. Using demo values.');
+      console.error("Weather fetch error:", err);
+      setError("Weather API failed. Demo values use ho rahe hain.");
       setWeatherData({
         temperature: 28,
-        humidity: 65,
-        windSpeed: 3.5,
-        cloudCover: 30,
-        condition: 'partly cloudy',
+        humidity: 60,
+        windSpeed: 3,
+        cloudCover: 20,
+        condition: "partly cloudy",
       });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCityChange = (e) => {
+    const city = e.target.value;
+    setSelectedCity(city);
+    if (city) fetchWeatherData(city);
+  };
+
   const generateSolarOutput = async () => {
     if (!weatherData) return;
-
     setPredicting(true);
-    setError('');
+    setError("");
 
     try {
-      const response = await fetch('http://localhost:5000/predict', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           temperature: weatherData.temperature,
           humidity: weatherData.humidity,
@@ -76,184 +79,142 @@ function Calculator() {
       });
 
       if (!response.ok) {
-        throw new Error('Prediction service unavailable');
+        let errMsg = "Backend error";
+        try {
+          const errData = await response.json();
+          errMsg = errData.error || errMsg;
+          console.error("Backend error details:", errData);
+        } catch {
+          console.error("Backend ne JSON nahi diya");
+        }
+        throw new Error(errMsg);
       }
 
-      const data = await response.json();
-      setSolarOutput(data.solar_output);
+      const result = await response.json();
+      const output = parseFloat(result.solar_output);
+      if (isNaN(output)) throw new Error("Invalid prediction value");
+      setSolarOutput(output);
+
     } catch (err) {
-      setError('Flask backend not running. Using demo calculation.');
+      console.error("Prediction error:", err.message);
       const demoOutput =
         weatherData.temperature * 0.3 -
         weatherData.cloudCover * 0.2 +
         weatherData.windSpeed * 0.1;
       setSolarOutput(Math.max(0, parseFloat(demoOutput.toFixed(2))));
+      setError(`⚠️ ${err.message} — Demo prediction dikh rahi hai.`);
     } finally {
       setPredicting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-yellow-50 py-12 px-4">
+    <div
+      className="min-h-screen bg-cover bg-center py-12 px-4"
+      style={{ backgroundImage: `url(${bgImage})` }}
+    >
       <div className="max-w-4xl mx-auto">
+
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <Sun className="w-16 h-16 text-yellow-500" />
-          </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <Sun className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+          <h1 className="text-5xl font-bold text-white drop-shadow">
             Solar Output Predictor
           </h1>
-          <p className="text-gray-600">
-            Select a city to fetch weather data and predict solar energy output
+          <p className="text-slate-50 mt-2">
+            Select city → Fetch weather → Generate solar output
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8">
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 flex items-center">
-              <span className="bg-sky-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm">
-                1
-              </span>
-              Select City
-            </h2>
-            <select
-              value={selectedCity}
-              onChange={(e) => setSelectedCity(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500 text-lg"
-            >
-              <option value="">Choose a city...</option>
-              {cities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="bg-white p-8 rounded-2xl shadow-xl">
+
+          <h2 className="text-xl font-semibold mb-4">1️⃣ Select City</h2>
+          <select
+            value={selectedCity}
+            onChange={handleCityChange}
+            className="w-full border p-3 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          >
+            <option value="">Choose a city...</option>
+            {cities.map((city) => (
+              <option key={city} value={city}>{city}</option>
+            ))}
+          </select>
 
           {loading && (
-            <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-sky-500 border-t-transparent"></div>
-              <p className="text-gray-600 mt-4">Fetching weather data...</p>
-            </div>
+            <p className="text-center text-gray-500 animate-pulse mb-4">
+              ⏳ Fetching weather data...
+            </p>
           )}
 
           {weatherData && !loading && (
             <>
-              <div className="mb-8">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <span className="bg-sky-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm">
-                    2
-                  </span>
-                  Weather Data
-                </h2>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border-2 border-orange-200">
-                    <div className="flex items-center mb-2">
-                      <Thermometer className="w-6 h-6 text-orange-600 mr-2" />
-                      <span className="font-semibold text-gray-700">Temperature</span>
-                    </div>
-                    <p className="text-3xl font-bold text-orange-600">
-                      {weatherData.temperature}°C
-                    </p>
-                  </div>
+              <h2 className="text-xl font-semibold mb-4">2️⃣ Weather Data</h2>
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
 
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border-2 border-blue-200">
-                    <div className="flex items-center mb-2">
-                      <Droplets className="w-6 h-6 text-blue-600 mr-2" />
-                      <span className="font-semibold text-gray-700">Humidity</span>
-                    </div>
-                    <p className="text-3xl font-bold text-blue-600">
-                      {weatherData.humidity}%
-                    </p>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-teal-50 to-teal-100 p-4 rounded-lg border-2 border-teal-200">
-                    <div className="flex items-center mb-2">
-                      <Wind className="w-6 h-6 text-teal-600 mr-2" />
-                      <span className="font-semibold text-gray-700">Wind Speed</span>
-                    </div>
-                    <p className="text-3xl font-bold text-teal-600">
-                      {weatherData.windSpeed} m/s
-                    </p>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-lg border-2 border-gray-300">
-                    <div className="flex items-center mb-2">
-                      <Cloud className="w-6 h-6 text-gray-600 mr-2" />
-                      <span className="font-semibold text-gray-700">Cloud Cover</span>
-                    </div>
-                    <p className="text-3xl font-bold text-gray-600">
-                      {weatherData.cloudCover}%
-                    </p>
+                <div className="p-4 border rounded-lg flex items-center gap-3 bg-orange-50">
+                  <Thermometer className="text-orange-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Temperature</p>
+                    <h3 className="text-2xl font-bold">{weatherData.temperature}°C</h3>
                   </div>
                 </div>
 
-                <div className="mt-4 p-3 bg-sky-50 rounded-lg border border-sky-200">
-                  <p className="text-gray-700">
-                    <span className="font-semibold">Condition:</span>{' '}
-                    <span className="capitalize">{weatherData.condition}</span>
-                  </p>
+                <div className="p-4 border rounded-lg flex items-center gap-3 bg-blue-50">
+                  <Droplets className="text-blue-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Humidity</p>
+                    <h3 className="text-2xl font-bold">{weatherData.humidity}%</h3>
+                  </div>
                 </div>
+
+                <div className="p-4 border rounded-lg flex items-center gap-3 bg-green-50">
+                  <Wind className="text-green-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Wind Speed</p>
+                    <h3 className="text-2xl font-bold">{weatherData.windSpeed} m/s</h3>
+                  </div>
+                </div>
+
+                <div className="p-4 border rounded-lg flex items-center gap-3 bg-gray-50">
+                  <Cloud className="text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Cloud Cover</p>
+                    <h3 className="text-2xl font-bold">{weatherData.cloudCover}%</h3>
+                  </div>
+                </div>
+
               </div>
-
-              <div className="mb-8">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <span className="bg-sky-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm">
-                    3
-                  </span>
-                  Generate Prediction
-                </h2>
-                <button
-                  onClick={generateSolarOutput}
-                  disabled={predicting}
-                  className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold py-4 rounded-lg shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {predicting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                      Calculating...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-5 h-5 mr-2" />
-                      Generate Solar Output
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {solarOutput !== null && (
-                <div className="mb-4">
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-4 flex items-center">
-                    <span className="bg-sky-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm">
-                      4
-                    </span>
-                    Prediction Result
-                  </h2>
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 p-8 rounded-xl border-4 border-green-300 text-center">
-                    <Sun className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                    <p className="text-gray-700 text-lg mb-2">Predicted Solar Output</p>
-                    <p className="text-5xl font-bold text-green-600">
-                      {solarOutput} <span className="text-3xl">kWh</span>
-                    </p>
-                  </div>
-                </div>
-              )}
             </>
           )}
 
-          {error && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
-              <p className="text-yellow-700">{error}</p>
+          {weatherData && !loading && (
+            <>
+              <h2 className="text-xl font-semibold mb-4">3️⃣ Generate Prediction</h2>
+              <button
+                onClick={generateSolarOutput}
+                disabled={predicting}
+                className="w-full bg-yellow-500 text-white py-3 rounded-lg hover:bg-yellow-600 transition font-semibold text-lg disabled:opacity-60"
+              >
+                {predicting ? "⏳ Calculating..." : "⚡ Generate Solar Output"}
+              </button>
+            </>
+          )}
+
+          {solarOutput !== null && (
+            <div className="mt-6 text-center bg-green-100 p-6 rounded-lg border border-green-300">
+              <Sun className="mx-auto mb-3 text-yellow-500" size={40} />
+              <p className="text-lg text-gray-600">Predicted Solar Output</p>
+              <h2 className="text-4xl font-bold text-green-700 mt-1">
+                {solarOutput} kWh
+              </h2>
             </div>
           )}
-        </div>
 
-        <div className="text-center text-sm text-gray-600">
-          <p>
-            Note: Make sure the Flask backend is running on localhost:5000 for live
-            predictions
-          </p>
+          {error && (
+            <p className="mt-4 text-yellow-800 bg-yellow-100 border border-yellow-300 p-3 rounded-lg text-sm">
+              {error}
+            </p>
+          )}
+
         </div>
       </div>
     </div>

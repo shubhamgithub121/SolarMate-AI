@@ -1,26 +1,27 @@
 import { Link } from 'react-router-dom';
 import { Sun, Zap, TrendingUp, Users } from 'lucide-react';
+import yuvika from '../assests/yuvikaDP.jpeg';
 
 function Home() {
   const teamMembers = [
     {
-      name: 'Rahul Sharma',
-      role: 'ML Engineer',
-      image: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
+      name: 'Yuvika Mittal',
+      Branch: 'DMAM',
+      image: yuvika,
     },
     {
-      name: 'Priya Patel',
-      role: 'Data Scientist',
+      name: 'Shreya Kumari',
+      Branch: 'DMAM',
       image: 'https://images.pexels.com/photos/3763188/pexels-photo-3763188.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
     },
     {
-      name: 'Arjun Mehta',
-      role: 'Backend Developer',
+      name: 'Rashmi Kumari',
+      Branch: 'DMAM',
       image: 'https://images.pexels.com/photos/3785079/pexels-photo-3785079.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
     },
     {
-      name: 'Ananya Singh',
-      role: 'Frontend Developer',
+      name: 'Nishi Sharma',
+      Branch: 'DMAM',
       image: 'https://images.pexels.com/photos/3756681/pexels-photo-3756681.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
     },
   ];
