@@ -4,16 +4,19 @@ import pickle
 import numpy as np
 from datetime import datetime
 import math
+import os
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}},
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type"])
 
-# ── Load ML model & scaler (optional — fallback formula used if missing) ───────
+# ── Load ML model & scaler ─────────────────────────────────────────────────────
+BASE = os.path.dirname(__file__)  # ye backend/ folder ka path hai
+
 try:
-    model  = pickle.load(open("model.pkl",  "rb"))
-    scaler = pickle.load(open("scaler.pkl", "rb"))
+    model  = pickle.load(open(os.path.join(BASE, "model.pkl"),  "rb"))
+    scaler = pickle.load(open(os.path.join(BASE, "scaler.pkl"), "rb"))
     print("✅ Model aur scaler load ho gaye!")
     MODEL_AVAILABLE = True
 except Exception as e:
@@ -23,12 +26,12 @@ except Exception as e:
     MODEL_AVAILABLE = False
 
 
-# ── Feature engineering for ML model ──────────────────────────────────────────
+# ── Feature engineering ────────────────────────────────────────────────────────
 def build_features(temperature, humidity, wind_speed, cloud_cover):
     now = datetime.now()
 
     temperature_val = float(np.clip(temperature, -10, 50))
-    pressure        = 0.0          # deviation from baseline — not absolute hPa
+    pressure        = 0.0
     humidity_val    = float(np.clip(humidity,    0, 100))
     wind_direction  = 180.0
     speed           = float(np.clip(wind_speed,  0,  20))
@@ -37,12 +40,10 @@ def build_features(temperature, humidity, wind_speed, cloud_cover):
     month   = float(now.month)
     weekday = float(now.weekday())
 
-    # UNIXTime anchored to training-era baseline (2016)
     base_unix   = 1472688000.0
     time_of_day = float(now.hour * 3600 + now.minute * 60 + now.second)
     unix_time   = base_unix + time_of_day
 
-    # Radiation estimate from cloud cover + time-of-day sun angle
     hour       = now.hour
     sun_angle  = math.sin(math.pi * (hour - 6) / 12) if 6 <= hour <= 18 else 0.0
     cloud_frac = float(cloud_cover) / 100.0
@@ -55,20 +56,10 @@ def build_features(temperature, humidity, wind_speed, cloud_cover):
     temp_humidity  = float(np.clip(temperature_val * humidity_val, 0, 4000))
 
     features = np.array([[
-        temperature_val,
-        pressure,
-        humidity_val,
-        wind_direction,
-        speed,
-        day,
-        month,
-        weekday,
-        unix_time,
-        radiation_lag1,
-        radiation_lag2,
-        rad_rolling3,
-        temp_humidity,
-        rad_ewma12,
+        temperature_val, pressure, humidity_val, wind_direction, speed,
+        day, month, weekday, unix_time,
+        radiation_lag1, radiation_lag2, rad_rolling3,
+        temp_humidity, rad_ewma12,
     ]], dtype=np.float64)
 
     names = [
@@ -84,16 +75,8 @@ def build_features(temperature, humidity, wind_speed, cloud_cover):
     return features
 
 
-# ── Fallback formula (used when model.pkl is unavailable) ─────────────────────
+# ── Fallback formula ───────────────────────────────────────────────────────────
 def fallback_formula(temperature, humidity, wind_speed, cloud_cover):
-    """
-    Physics-inspired estimate (kWh):
-    - Base = 8 peak sun hours (India average)
-    - Panel efficiency drops ~0.4 %/degC above 25 degC
-    - Cloud cover is the dominant reduction factor
-    - Humidity adds a modest reduction
-    - Wind provides a small cooling efficiency bonus
-    """
     base         = 8.0
     temp_penalty = max(0.0, (temperature - 25) * 0.004)
     temp_factor  = 1.0 - temp_penalty
@@ -108,7 +91,6 @@ def fallback_formula(temperature, humidity, wind_speed, cloud_cover):
 # ── /predict endpoint ──────────────────────────────────────────────────────────
 @app.route("/predict", methods=["POST", "OPTIONS"])
 def predict():
-    # Handle CORS preflight
     if request.method == "OPTIONS":
         resp = jsonify({"status": "ok"})
         resp.headers.add("Access-Control-Allow-Origin",  "*")
@@ -121,7 +103,6 @@ def predict():
         if not data:
             return jsonify({"error": "JSON body nahi mila"}), 400
 
-        # Validate required fields
         required = ["temperature", "humidity", "wind_speed", "cloud_cover"]
         missing  = [f for f in required if f not in data]
         if missing:
@@ -132,7 +113,6 @@ def predict():
         wind_speed  = float(data["wind_speed"])
         cloud_cover = float(data["cloud_cover"])
 
-        # Route to ML model OR fallback formula
         if MODEL_AVAILABLE:
             features     = build_features(temperature, humidity, wind_speed, cloud_cover)
             scaled       = scaler.transform(features)
@@ -165,4 +145,5 @@ def home():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
