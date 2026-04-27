@@ -1,6 +1,7 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { Sun, Zap, TrendingUp, Users } from 'lucide-react';
 import yuvika from '../assests/yuvikaDP.jpeg';
+import { Link } from 'react-router-dom';
 
 function Home() {
   const teamMembers = [
