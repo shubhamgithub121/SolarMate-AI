@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Cloud, Thermometer, Droplets, Wind, Sun, ChevronDown, ChevronUp } from "lucide-react";
 import bgImage from "../assests/sky.jpg";
 
-const BACKEND_URL = "https://solarmate-ai.onrender.com";
+const BACKEND_URL = "https://solarmate-ai.onrender.com/predict";
 
 // ─── Reusable Solar Output Card ──────────────────────────────────────────────
 function SolarOutputCard({ value }) {
