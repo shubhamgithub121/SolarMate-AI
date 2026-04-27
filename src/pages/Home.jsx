@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Sun, Zap, TrendingUp, Users } from 'lucide-react';
 import yuvika from '../assests/yuvikaDP.jpeg';
 import { Link } from 'react-router-dom';
+import rashmi from '../assests/rashmi.jpeg';
+import shreya from '../assests/shreya.jpeg';
+import nishi from '../assests/nishi.jpeg';
 
 function Home() {
   const teamMembers = [
@@ -13,17 +16,17 @@ function Home() {
     {
       name: 'Shreya Kumari',
       Branch: 'DMAM',
-      image: 'https://images.pexels.com/photos/3763188/pexels-photo-3763188.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
+      image: shreya,
     },
     {
       name: 'Rashmi Kumari',
       Branch: 'DMAM',
-      image: 'https://images.pexels.com/photos/3785079/pexels-photo-3785079.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
+      image: rashmi,
     },
     {
       name: 'Nishi Sharma',
       Branch: 'DMAM',
-      image: 'https://images.pexels.com/photos/3756681/pexels-photo-3756681.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
+      image: nishi,
     },
   ];
 
